@@ -5,24 +5,63 @@ using LiteDB;
 namespace PatientRecordsMAUI.Models
 {
     /// <summary>
+    /// Datový typ pro metriku.
+    /// </summary>
+    public enum MetricDataType
+    {
+        Number,
+        Boolean,
+        String,
+        Choice
+    }
+
+    /// <summary>
+    /// Popis nastavení konkrétní metriky.
+    /// </summary>
+    public class MetricDefinition
+    {
+        /// <summary>
+        /// Název metriky (např. "Tep", "Stav").
+        /// </summary>
+        public string Name { get; set; }
+        
+        /// <summary>
+        /// Datový typ metriky.
+        /// </summary>
+        public MetricDataType DataType { get; set; }
+        
+        /// <summary>
+        /// Seznam dostupných možností výběru (používá se pouze pro typ Choice).
+        /// </summary>
+        public List<string> AllowedOptions { get; set; } = new List<string>();
+    }
+
+    /// <summary>
     /// Představuje profil pacienta.
     /// </summary>
     public class Patient
     {
         [BsonId]
         public Guid Id { get; set; }
+        
+        /// <summary>
+        /// Celé jméno pacienta.
+        /// </summary>
         public string FullName { get; set; }
-        public int Age { get; set; }
 
         /// <summary>
-        /// Seznam metrik, které jsou pro tohoto pacienta sledovány (např. "HeartRate", "BloodPressure").
+        /// Datum narození pacienta.
         /// </summary>
-        public List<string> TrackedMetrics { get; set; } = new List<string>();
-        // Další vlastnosti můžete přidat zde
+        public DateTime DateOfBirth { get; set; }
+
+        /// <summary>
+        /// Seznam metrik, které sledujeme u tohoto pacienta.
+        /// </summary>
+        public List<MetricDefinition> TrackedMetrics { get; set; } = new List<MetricDefinition>();
     }
 
     /// <summary>
-    /// Představuje záznam metrik pacienta za jeden konkrétní den (vzor Bucket).
+    /// Představuje záznam metrik pacienta za jeden konkrétní den (Vzor Bucket).
     /// </summary>
     public class DailyMetricsRecord
     {
@@ -30,23 +69,23 @@ namespace PatientRecordsMAUI.Models
         public ObjectId Id { get; set; }
         
         /// <summary>
-        /// Identifikátor pacienta (pro propojení).
+        /// Identifikátor pacienta.
         /// </summary>
         public Guid PatientId { get; set; }
         
         /// <summary>
-        /// Datum záznamu (čas by měl být 00:00:00).
+        /// Datum záznamu (bez času).
         /// </summary>
         public DateTime Date { get; set; }
 
         /// <summary>
-        /// Sbírka hodinových měření (od 0 do 23).
+        /// Měření podle hodin.
         /// </summary>
         public List<HourlyMeasurement> Measurements { get; set; } = new List<HourlyMeasurement>();
     }
 
     /// <summary>
-    /// Obsahuje měření za určitou hodinu pro DailyMetricsRecord.
+    /// Obsahuje měření za určitou hodinu pro konkrétní den.
     /// </summary>
     public class HourlyMeasurement
     {
@@ -56,8 +95,8 @@ namespace PatientRecordsMAUI.Models
         public int Hour { get; set; }
 
         /// <summary>
-        /// Dynamický slovník metrik. Klíč je název metriky (např. "HeartRate"), hodnota je naměřená hodnota.
+        /// Slovník s měřeními, kde klíč je název metriky a hodnota je samotná hodnota měření.
         /// </summary>
-        public Dictionary<string, double> Metrics { get; set; } = new Dictionary<string, double>();
+        public Dictionary<string, object> Metrics { get; set; } = new Dictionary<string, object>();
     }
 }

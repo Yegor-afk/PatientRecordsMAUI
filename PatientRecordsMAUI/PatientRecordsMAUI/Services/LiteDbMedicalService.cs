@@ -54,14 +54,19 @@ namespace PatientRecordsMAUI.Services
 
         /// <summary>
         /// Ukládá nebo aktualizuje konkrétní metriku pro pacienta za určité datum a hodinu.
-        /// Používá vzor Bucket a dynamický slovník metrik.
+        /// Podporuje různé typy hodnot: číselné, textové (kategorie), booleovské.
+        /// 
+        /// Příklady použití:
+        /// - UpdateHourlyMetric(id, date, hour, "HeartRate", 75.5); // double
+        /// - UpdateHourlyMetric(id, date, hour, "PainLevel", "Vysoký"); // string
+        /// - UpdateHourlyMetric(id, date, hour, "IsSleeping", true); // bool
         /// </summary>
         /// <param name="patientId">ID pacienta</param>
         /// <param name="date">Datum měření (čas bude ignorován)</param>
         /// <param name="hour">Hodina měření (0-23)</param>
         /// <param name="metricName">Název metriky (např. "HeartRate")</param>
-        /// <param name="value">Hodnota metriky</param>
-        public void UpdateHourlyMetric(Guid patientId, DateTime date, int hour, string metricName, double value)
+        /// <param name="value">Hodnota metriky jakéhokoliv základního typu (číslo, řetězec, bool)</param>
+        public void UpdateHourlyMetric(Guid patientId, DateTime date, int hour, string metricName, object value)
         {
             if (hour < 0 || hour > 23)
                 throw new ArgumentOutOfRangeException(nameof(hour), "Hodina musí být v rozmezí od 0 do 23.");
@@ -97,11 +102,33 @@ namespace PatientRecordsMAUI.Services
                 bucket.Measurements.Add(measurement);
             }
 
-            // Aktualizujeme nebo přidáváme metriku
-            measurement.Metrics[metricName] = value;
+            // Aktualizujeme nebo přidáváme metriku. Převedeme object na BsonValue pro správné uložení v LiteDB.
+            measurement.Metrics[metricName] = _db.Mapper.Serialize(value);
 
             // Pokud je kbelík nový (Id == ObjectId.Empty), Insert, jinak Update
             col.Upsert(bucket);
+        }
+
+        /// <summary>
+        /// Získá hodnotu metriky a bezpečně ji převede na požadovaný typ.
+        /// Je ideální pro čtení čísel, textu nebo bool hodnot ze záznamu pacienta.
+        /// </summary>
+        /// <typeparam name="T">Očekávaný typ návratové hodnoty (double, string, bool, atd.)</typeparam>
+        public T GetMetricValue<T>(Guid patientId, DateTime date, int hour, string metricName)
+        {
+            var col = _db.GetCollection<DailyMetricsRecord>("daily_metrics");
+            DateTime pureDate = date.Date;
+
+            var bucket = col.FindOne(x => x.PatientId == patientId && x.Date == pureDate);
+            if (bucket != null)
+            {
+                var measurement = bucket.Measurements.FirstOrDefault(m => m.Hour == hour);
+                if (measurement != null && measurement.Metrics.TryGetValue(metricName, out BsonValue bsonValue))
+                {
+                    return _db.Mapper.Deserialize<T>(bsonValue);
+                }
+            }
+            return default;
         }
 
         /// <summary>
