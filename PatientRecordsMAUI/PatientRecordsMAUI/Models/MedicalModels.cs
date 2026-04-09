@@ -57,5 +57,6 @@ namespace PatientRecordsMAUI.Models
         public double Metric5 { get; set; }
         public double Metric6 { get; set; }
         public double Metric7 { get; set; }
+        public double Metric8 { get; set; }
     }
 }
