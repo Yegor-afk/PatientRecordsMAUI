@@ -5,7 +5,7 @@ using LiteDB;
 namespace PatientRecordsMAUI.Models
 {
     /// <summary>
-    /// Представляет профиль пациента.
+    /// Představuje profil pacienta.
     /// </summary>
     public class Patient
     {
@@ -13,11 +13,11 @@ namespace PatientRecordsMAUI.Models
         public Guid Id { get; set; }
         public string FullName { get; set; }
         public int Age { get; set; }
-        // Дополнительные свойства можно добавить здесь
+        // Další vlastnosti můžete přidat zde
     }
 
     /// <summary>
-    /// Представляет запись метрик пациента за один конкретный день (Паттерн Bucket).
+    /// Představuje záznam metrik pacienta za jeden konkrétní den (vzor Bucket).
     /// </summary>
     public class DailyMetricsRecord
     {
@@ -25,28 +25,28 @@ namespace PatientRecordsMAUI.Models
         public ObjectId Id { get; set; }
         
         /// <summary>
-        /// Идентификатор пациента (для связи).
+        /// Identifikátor pacienta (pro propojení).
         /// </summary>
         public Guid PatientId { get; set; }
         
         /// <summary>
-        /// Дата записи (время должно быть 00:00:00).
+        /// Datum záznamu (čas by měl být 00:00:00).
         /// </summary>
         public DateTime Date { get; set; }
 
         /// <summary>
-        /// Коллекция ежечасных замеров (от 0 до 23).
+        /// Sbírka hodinových měření (od 0 do 23).
         /// </summary>
         public List<HourlyMeasurement> Measurements { get; set; } = new List<HourlyMeasurement>();
     }
 
     /// <summary>
-    /// Содержит замеры за определенный час для DailyMetricsRecord.
+    /// Obsahuje měření za určitou hodinu pro DailyMetricsRecord.
     /// </summary>
     public class HourlyMeasurement
     {
         /// <summary>
-        /// Час замера (0 - 23).
+        /// Hodina měření (0 - 23).
         /// </summary>
         public int Hour { get; set; }
 

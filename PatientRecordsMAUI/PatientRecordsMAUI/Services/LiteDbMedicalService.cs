@@ -8,7 +8,7 @@ using PatientRecordsMAUI.Models;
 namespace PatientRecordsMAUI.Services
 {
     /// <summary>
-    /// Сервис для работы с базой данных пациентов и метрик (Singleton для эффективного использования LiteDB).
+    /// Služba pro práci s databází pacientů a metrik (Singleton pro efektivní využití LiteDB).
     /// </summary>
     public class LiteDbMedicalService : IDisposable
     {
@@ -16,64 +16,64 @@ namespace PatientRecordsMAUI.Services
         private const string DbFileName = "medicalData.db";
 
         /// <summary>
-        /// Инициализирует новый экземпляр сервиса работы с БД LiteDB.
+        /// Inicializuje novou instanci služby pro práci s databází LiteDB.
         /// </summary>
         public LiteDbMedicalService()
         {
-            // Для правильного пути в зависимости от ОС:
-            // В .NET MAUI: FileSystem.AppDataDirectory обычно рекомендуется,
-            // но для простоты используем текущую директорию или системную:
+            // Pro správnou cestu v závislosti na OS:
+            // V .NET MAUI: FileSystem.AppDataDirectory se obvykle doporučuje,
+            // ale pro jednoduchost používáme aktuální nebo systémový adresář:
             string dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), DbFileName);
 
-            // Инициализация базы данных
+            // Inicializace databáze
             _db = new LiteDatabase(dbPath);
-            
-            // Настройка индексов для оптимизации запросов
+
+            // Nastavení indexů pro optimalizaci dotazů
             var metricsCol = _db.GetCollection<DailyMetricsRecord>("daily_metrics");
             metricsCol.EnsureIndex(x => x.PatientId);
             metricsCol.EnsureIndex(x => x.Date);
         }
 
         /// <summary>
-        /// Добавляет нового пациента в базу данных.
+        /// Přidává nového pacienta do databáze.
         /// </summary>
-        /// <param name="patient">Модель пациента.</param>
+        /// <param name="patient">Model pacienta.</param>
         public void AddPatient(Patient patient)
         {
             if (patient == null)
                 throw new ArgumentNullException(nameof(patient));
 
             var col = _db.GetCollection<Patient>("patients");
-            
-            // Задаем новый Guid, если не инициализирован
+
+            // Nastavujeme nové Guid, pokud není inicializováno
             if (patient.Id == Guid.Empty)
                 patient.Id = Guid.NewGuid();
-                
+
             col.Insert(patient);
         }
 
         /// <summary>
-        /// Сохраняет или обновляет ежечасные метрики для пациента за определенную дату и час.
-        /// Использует паттерн Bucket.
+        /// Ukládá nebo aktualizuje hodinové metriky pro pacienta za určité datum a hodinu.
+        /// Používá vzor Bucket.
         /// </summary>
         public void SaveHourlyMetrics(
             Guid patientId, DateTime date, int hour, 
             double m1, double m2, double m3, double m4, double m5, double m6, double m7)
         {
             if (hour < 0 || hour > 23)
-                throw new ArgumentOutOfRangeException(nameof(hour), "Час должен быть в диапазоне от 0 до 23.");
+                throw new ArgumentOutOfRangeException(nameof(hour), "Hodina musí být v rozmezí od 0 do 23.");
 
-            // Убираем время из DateTime (оставляем только дату)
+            // Odstraňujeme čas z DateTime (ponecháváme pouze datum)
             DateTime pureDate = date.Date;
 
             var col = _db.GetCollection<DailyMetricsRecord>("daily_metrics");
 
-            // Ищем корзину (bucket) для данного пациента и даты
+            // Hledáme kbelík (bucket) pro daného pacienta a datum
             var bucket = col.FindOne(x => x.PatientId == patientId && x.Date == pureDate);
 
             if (bucket == null)
             {
-                // Создаем новую корзину
+                // Vytváříme nový kbelík
                 bucket = new DailyMetricsRecord
                 {
                     PatientId = patientId,
@@ -82,16 +82,16 @@ namespace PatientRecordsMAUI.Services
                 };
             }
 
-            // Ищем существующий замер за этот час
+            // Hledáme existující měření za tuto hodinu
             var measurement = bucket.Measurements.FirstOrDefault(m => m.Hour == hour);
-            
+
             if (measurement == null)
             {
                 measurement = new HourlyMeasurement { Hour = hour };
                 bucket.Measurements.Add(measurement);
             }
 
-            // Обновляем метрики
+            // Aktualizujeme metriky
             measurement.Metric1 = m1;
             measurement.Metric2 = m2;
             measurement.Metric3 = m3;
@@ -100,26 +100,26 @@ namespace PatientRecordsMAUI.Services
             measurement.Metric6 = m6;
             measurement.Metric7 = m7;
 
-            // Если корзина новая (Id == ObjectId.Empty), Insert, иначе Update
+            // Pokud je kbelík nový (Id == ObjectId.Empty), Insert, jinak Update
             col.Upsert(bucket);
         }
 
         /// <summary>
-        /// Получает все метрики пациента за конкретный день для анализа.
+        /// Získává všechny metriky pacienta pro konkrétní den k analýze.
         /// </summary>
-        /// <param name="patientId">ID пациента.</param>
-        /// <param name="date">Дата поиска.</param>
-        /// <returns>Запись за день или null, если данных нет.</returns>
+        /// <param name="patientId">ID pacienta.</param>
+        /// <param name="date">Datum hledání.</param>
+        /// <returns>Záznam za den nebo null, pokud nejsou žádná data.</returns>
         public DailyMetricsRecord GetPatientMetricsForDay(Guid patientId, DateTime date)
         {
             var col = _db.GetCollection<DailyMetricsRecord>("daily_metrics");
             DateTime pureDate = date.Date;
-            
+
             return col.FindOne(x => x.PatientId == patientId && x.Date == pureDate);
         }
 
         /// <summary>
-        /// Освобождает ресурсы базы данных.
+        /// Uvolňuje prostředky databáze.
         /// </summary>
         public void Dispose()
         {
