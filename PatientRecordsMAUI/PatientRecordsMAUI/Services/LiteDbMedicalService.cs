@@ -53,15 +53,21 @@ namespace PatientRecordsMAUI.Services
         }
 
         /// <summary>
-        /// Ukládá nebo aktualizuje hodinové metriky pro pacienta za určité datum a hodinu.
-        /// Používá vzor Bucket.
+        /// Ukládá nebo aktualizuje konkrétní metriku pro pacienta za určité datum a hodinu.
+        /// Používá vzor Bucket a dynamický slovník metrik.
         /// </summary>
-        public void SaveHourlyMetrics(
-            Guid patientId, DateTime date, int hour, 
-            double m1, double m2, double m3, double m4, double m5, double m6, double m7)
+        /// <param name="patientId">ID pacienta</param>
+        /// <param name="date">Datum měření (čas bude ignorován)</param>
+        /// <param name="hour">Hodina měření (0-23)</param>
+        /// <param name="metricName">Název metriky (např. "HeartRate")</param>
+        /// <param name="value">Hodnota metriky</param>
+        public void UpdateHourlyMetric(Guid patientId, DateTime date, int hour, string metricName, double value)
         {
             if (hour < 0 || hour > 23)
                 throw new ArgumentOutOfRangeException(nameof(hour), "Hodina musí být v rozmezí od 0 do 23.");
+
+            if (string.IsNullOrWhiteSpace(metricName))
+                throw new ArgumentException("Název metriky nemůže být prázdný.", nameof(metricName));
 
             // Odstraňujeme čas z DateTime (ponecháváme pouze datum)
             DateTime pureDate = date.Date;
@@ -91,17 +97,44 @@ namespace PatientRecordsMAUI.Services
                 bucket.Measurements.Add(measurement);
             }
 
-            // Aktualizujeme metriky
-            measurement.Metric1 = m1;
-            measurement.Metric2 = m2;
-            measurement.Metric3 = m3;
-            measurement.Metric4 = m4;
-            measurement.Metric5 = m5;
-            measurement.Metric6 = m6;
-            measurement.Metric7 = m7;
+            // Aktualizujeme nebo přidáváme metriku
+            measurement.Metrics[metricName] = value;
 
             // Pokud je kbelík nový (Id == ObjectId.Empty), Insert, jinak Update
             col.Upsert(bucket);
+        }
+
+        /// <summary>
+        /// Odstraní konkrétní metriku z měření pro daného pacienta, den a hodinu.
+        /// </summary>
+        /// <param name="patientId">ID pacienta</param>
+        /// <param name="date">Datum měření</param>
+        /// <param name="hour">Hodina (0-23)</param>
+        /// <param name="metricName">Název metriky k odstranění</param>
+        public void RemoveHourlyMetric(Guid patientId, DateTime date, int hour, string metricName)
+        {
+            if (hour < 0 || hour > 23)
+                throw new ArgumentOutOfRangeException(nameof(hour), "Hodina musí být v rozmezí od 0 do 23.");
+
+            if (string.IsNullOrWhiteSpace(metricName))
+                throw new ArgumentException("Název metriky nemůže být prázdný.", nameof(metricName));
+
+            DateTime pureDate = date.Date;
+            var col = _db.GetCollection<DailyMetricsRecord>("daily_metrics");
+
+            var bucket = col.FindOne(x => x.PatientId == patientId && x.Date == pureDate);
+            if (bucket == null) return;
+
+            var measurement = bucket.Measurements.FirstOrDefault(m => m.Hour == hour);
+            if (measurement != null && measurement.Metrics.ContainsKey(metricName))
+            {
+                measurement.Metrics.Remove(metricName);
+
+                // Můžeme se rozhodnout, zda smazat celé měření, pokud neobsahuje žádné metriky
+                // if (!measurement.Metrics.Any()) bucket.Measurements.Remove(measurement);
+
+                col.Update(bucket);
+            }
         }
 
         /// <summary>

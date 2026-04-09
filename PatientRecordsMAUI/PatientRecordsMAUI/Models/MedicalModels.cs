@@ -13,6 +13,11 @@ namespace PatientRecordsMAUI.Models
         public Guid Id { get; set; }
         public string FullName { get; set; }
         public int Age { get; set; }
+
+        /// <summary>
+        /// Seznam metrik, které jsou pro tohoto pacienta sledovány (např. "HeartRate", "BloodPressure").
+        /// </summary>
+        public List<string> TrackedMetrics { get; set; } = new List<string>();
         // Další vlastnosti můžete přidat zde
     }
 
@@ -50,13 +55,9 @@ namespace PatientRecordsMAUI.Models
         /// </summary>
         public int Hour { get; set; }
 
-        public double Metric1 { get; set; }
-        public double Metric2 { get; set; }
-        public double Metric3 { get; set; }
-        public double Metric4 { get; set; }
-        public double Metric5 { get; set; }
-        public double Metric6 { get; set; }
-        public double Metric7 { get; set; }
-        public double Metric8 { get; set; }
+        /// <summary>
+        /// Dynamický slovník metrik. Klíč je název metriky (např. "HeartRate"), hodnota je naměřená hodnota.
+        /// </summary>
+        public Dictionary<string, double> Metrics { get; set; } = new Dictionary<string, double>();
     }
 }
